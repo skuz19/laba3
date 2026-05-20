@@ -4,10 +4,10 @@
 
 using namespace std;
 
-// функция для нахождения НОД (алгоритм Евклида)
-long gcd(long a, long b) {
+// функция для нахождения НОД
+uint gcd(uint a, uint b) {
     while (b != 0) {
-        long temp = b;
+        uint temp = b;
         b = a % b;
         a = temp;
     }
@@ -15,66 +15,79 @@ long gcd(long a, long b) {
 }
 
 // вычисление суммы ряда
-string calculateSum(int a, int b) {
+string calculateSum(uint a, uint b) {
 
     // проверка сходимости ряда
-    // ряд сходится только при b > 1
     if (b <= 1) {
         return "infinity";
     }
 
-    long numerator = 0;     // числитель
-    long denominator = 1;   // знаменатель
+    uint numerator = 0;
+    uint denominator = 1;
 
-    // используем формулы для суммы ряда
-    // сумма: sum(n^a / b^n)
-
+    // формулы суммы ряда
     switch (a) {
 
-        // a = 1
         case 1:
             numerator = b;
             denominator = (b - 1) * (b - 1);
             break;
 
-        // a = 2
         case 2:
             numerator = b * (b + 1);
-            denominator = (b - 1) * (b - 1) * (b - 1);
+            denominator = pow(b - 1, 3);
             break;
 
-        // a = 3
         case 3:
             numerator = b * (b * b + 4 * b + 1);
-            denominator = (b - 1) * (b - 1) * (b - 1) * (b - 1);
+            denominator = pow(b - 1, 4);
             break;
 
-        // a = 4
         case 4:
             numerator = b * (b * b * b + 11 * b * b + 11 * b + 1);
-            denominator = (b - 1) * (b - 1) * (b - 1) * (b - 1) * (b - 1);
+            denominator = pow(b - 1, 5);
             break;
 
-        default:
-            // по условию a от 1 до 10, но формулы даны до 4
-            return "не поддерживается";
+        // для остальных случаев используем численное вычисление
+        default: {
+
+            double sum = 0.0;
+
+            for (uint n = 1; n <= 100000; n++) {
+                sum += pow(n, a) / pow(b, n);
+            }
+
+            const uint PRECISION = 1000000;
+
+            numerator = round(sum * PRECISION);
+            denominator = PRECISION;
+
+            break;
+        }
     }
 
-    // сокращаем дробь
-    long g = gcd(numerator, denominator);
+    // сокращение дроби
+    uint g = gcd(numerator, denominator);
+
     numerator /= g;
     denominator /= g;
 
-    // формируем строку результата
+    // формирование результата
     return to_string(numerator) + "/" + to_string(denominator);
 }
 
 int main() {
 
-    int a, b;
+    uint a, b;
 
     cout << "Введите a и b: ";
     cin >> a >> b;
+
+    // проверка диапазона
+    if (a < 1 || a > 10 || b < 1 || b > 10) {
+        cout << "Ошибка ввода" << endl;
+        return 0;
+    }
 
     // вычисление результата
     string result = calculateSum(a, b);
