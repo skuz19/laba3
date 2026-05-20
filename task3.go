@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 )
 
-// функция для нахождения НОД (алгоритм Евклида)
-func gcd(a, b int64) int64 {
+// функция для нахождения НОД
+func gcd(a uint, b uint) uint {
 	for b != 0 {
 		a, b = b, a%b
 	}
@@ -13,60 +15,77 @@ func gcd(a, b int64) int64 {
 }
 
 // вычисление суммы ряда
-func calculateSum(a, b int) string {
+func calculateSum(a uint, b uint) string {
 
 	// проверка сходимости ряда
 	if b <= 1 {
 		return "infinity"
 	}
 
-	var numerator int64   // числитель
-	var denominator int64 // знаменатель
+	var numerator uint = 0
+	var denominator uint = 1
 
-	// используем готовые формулы
+	// формулы суммы ряда
 	switch a {
 
-	// a = 1
 	case 1:
-		numerator = int64(b)
-		denominator = int64((b - 1) * (b - 1))
+		numerator = b
+		denominator = (b - 1) * (b - 1)
 
-	// a = 2
 	case 2:
-		numerator = int64(b * (b + 1))
-		denominator = int64((b - 1) * (b - 1) * (b - 1))
+		numerator = b * (b + 1)
+		denominator = uint(math.Pow(float64(b-1), 3))
 
-	// a = 3
 	case 3:
-		numerator = int64(b * (b*b + 4*b + 1))
-		denominator = int64((b - 1) * (b - 1) * (b - 1) * (b - 1))
+		numerator = b * (b*b + 4*b + 1)
+		denominator = uint(math.Pow(float64(b-1), 4))
 
-	// a = 4
 	case 4:
-		numerator = int64(b * (b*b*b + 11*b*b + 11*b + 1))
-		denominator = int64((b - 1) * (b - 1) * (b - 1) * (b - 1) * (b - 1))
+		numerator = b * (b*b*b + 11*b*b + 11*b + 1)
+		denominator = uint(math.Pow(float64(b-1), 5))
 
+	// для остальных случаев используем численное вычисление
 	default:
-		return "не поддерживается"
+
+		sum := 0.0
+
+		for n := uint(1); n <= 100000; n++ {
+			sum += math.Pow(float64(n), float64(a)) /
+				math.Pow(float64(b), float64(n))
+		}
+
+		const precision uint = 1000000
+
+		numerator = uint(math.Round(sum * float64(precision)))
+		denominator = precision
 	}
 
-	// сокращаем дробь
+	// сокращение дроби
 	g := gcd(numerator, denominator)
+
 	numerator /= g
 	denominator /= g
 
-	// формируем строку результата
-	return fmt.Sprintf("%d/%d", numerator, denominator)
+	// формирование результата
+	return strconv.FormatUint(uint64(numerator), 10) +
+		"/" +
+		strconv.FormatUint(uint64(denominator), 10)
 }
 
 func main() {
 
-	var a, b int
+	var a, b uint
 
 	fmt.Print("Введите a и b: ")
 	fmt.Scan(&a, &b)
 
-	// вычисление суммы
+	// проверка диапазона
+	if a < 1 || a > 10 || b < 1 || b > 10 {
+		fmt.Println("Ошибка ввода")
+		return
+	}
+
+	// вычисление результата
 	result := calculateSum(a, b)
 
 	// вывод результата
