@@ -48,7 +48,7 @@ string calculateSum(uint a, uint b) {
             denominator = pow(b - 1, 5);
             break;
 
-        // для остальных случаев используем численное вычисление
+        // остальные случаи a = 5..10
         default: {
 
             double sum = 0.0;
@@ -66,6 +66,11 @@ string calculateSum(uint a, uint b) {
         }
     }
 
+    // защита от деления на ноль
+    if (denominator == 0) {
+        return "error";
+    }
+
     // сокращение дроби
     uint g = gcd(numerator, denominator);
 
@@ -78,19 +83,23 @@ string calculateSum(uint a, uint b) {
 
 int main() {
 
-    uint a, b;
+    int a, b;
 
     cout << "Введите a и b: ";
     cin >> a >> b;
 
+    // проверка корректности ввода
+    if (cin.fail()) {
+        return 0;
+    }
+
     // проверка диапазона
     if (a < 1 || a > 10 || b < 1 || b > 10) {
-        cout << "Ошибка ввода" << endl;
         return 0;
     }
 
     // вычисление результата
-    string result = calculateSum(a, b);
+    string result = calculateSum((uint)a, (uint)b);
 
     // вывод результата
     cout << "Результат: " << result << endl;
