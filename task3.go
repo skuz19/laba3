@@ -60,6 +60,11 @@ func calculateSum(a uint, b uint) string {
 		denominator = precision
 	}
 
+	// защита от деления на ноль
+	if denominator == 0 {
+		return "error"
+	}
+
 	// сокращение дроби
 	g := gcd(numerator, denominator)
 
@@ -72,67 +77,26 @@ func calculateSum(a uint, b uint) string {
 		strconv.FormatUint(uint64(denominator), 10)
 }
 
-// функция тестирования
-func runTests() {
-
-	fmt.Println("\nПроверка программы:\n")
-
-	// тест из задания
-	fmt.Println("Тест 1")
-	fmt.Println("Ввод: 1 2")
-	fmt.Println("Вывод:", calculateSum(1, 2))
-	fmt.Println()
-
-	// расходящийся ряд
-	fmt.Println("Тест 2")
-	fmt.Println("Ввод: 2 1")
-	fmt.Println("Вывод:", calculateSum(2, 1))
-	fmt.Println()
-
-	// тест из задания
-	fmt.Println("Тест 3")
-	fmt.Println("Ввод: 3 4")
-	fmt.Println("Вывод:", calculateSum(3, 4))
-	fmt.Println()
-
-	// проверка a > 4
-	fmt.Println("Тест 4")
-	fmt.Println("Ввод: 7 3")
-	fmt.Println("Вывод:", calculateSum(7, 3))
-	fmt.Println()
-
-	// минимальные значения
-	fmt.Println("Тест 5")
-	fmt.Println("Ввод: 1 1")
-	fmt.Println("Вывод:", calculateSum(1, 1))
-	fmt.Println()
-
-	// максимальные значения
-	fmt.Println("Тест 6")
-	fmt.Println("Ввод: 10 10")
-	fmt.Println("Вывод:", calculateSum(10, 10))
-	fmt.Println()
-}
-
 func main() {
 
-	var a, b uint
+	var a, b int
 
 	fmt.Print("Введите a и b: ")
-	fmt.Scan(&a, &b)
+	_, err := fmt.Scan(&a, &b)
+
+	// проверка корректности ввода
+	if err != nil {
+		return
+	}
 
 	// проверка диапазона
 	if a < 1 || a > 10 || b < 1 || b > 10 {
-		fmt.Println("Ошибка ввода")
 		return
 	}
 
 	// вычисление результата
-	result := calculateSum(a, b)
+	result := calculateSum(uint(a), uint(b))
 
 	// вывод результата
 	fmt.Println("Результат:", result)
-
-	// запуск тестов
-	runTests()
 }
