@@ -7,7 +7,7 @@ import (
 )
 
 // функция для нахождения НОД
-func gcd(a uint, b uint) uint {
+func gcd(a uint32, b uint32) uint32 {
 	for b != 0 {
 		a, b = b, a%b
 	}
@@ -15,15 +15,15 @@ func gcd(a uint, b uint) uint {
 }
 
 // вычисление суммы ряда
-func calculateSum(a uint, b uint) string {
+func calculateSum(a uint32, b uint32) string {
 
 	// проверка сходимости ряда
 	if b <= 1 {
 		return "infinity"
 	}
 
-	var numerator uint = 0
-	var denominator uint = 1
+	var numerator uint32 = 0
+	var denominator uint32 = 1
 
 	// формулы суммы ряда
 	switch a {
@@ -34,29 +34,29 @@ func calculateSum(a uint, b uint) string {
 
 	case 2:
 		numerator = b * (b + 1)
-		denominator = uint(math.Pow(float64(b-1), 3))
+		denominator = uint32(math.Pow(float64(b-1), 3))
 
 	case 3:
 		numerator = b * (b*b + 4*b + 1)
-		denominator = uint(math.Pow(float64(b-1), 4))
+		denominator = uint32(math.Pow(float64(b-1), 4))
 
 	case 4:
 		numerator = b * (b*b*b + 11*b*b + 11*b + 1)
-		denominator = uint(math.Pow(float64(b-1), 5))
+		denominator = uint32(math.Pow(float64(b-1), 5))
 
 	// остальные случаи a = 5..10
 	default:
 
 		sum := 0.0
 
-		for n := uint(1); n <= 100000; n++ {
+		for n := uint32(1); n <= 100000; n++ {
 			sum += math.Pow(float64(n), float64(a)) /
 				math.Pow(float64(b), float64(n))
 		}
 
-		const precision uint = 1000000
+		const precision uint32 = 1000000
 
-		numerator = uint(math.Round(sum * float64(precision)))
+		numerator = uint32(math.Round(sum * float64(precision)))
 		denominator = precision
 	}
 
@@ -95,7 +95,7 @@ func main() {
 	}
 
 	// вычисление результата
-	result := calculateSum(uint(a), uint(b))
+	result := calculateSum(uint32(a), uint32(b))
 
 	// вывод результата
 	fmt.Println("Результат:", result)
