@@ -1,13 +1,14 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <cstdint>  // для uint32_t
 
 using namespace std;
 
 // функция для нахождения НОД
-uint gcd(uint a, uint b) {
+uint32_t gcd(uint32_t a, uint32_t b) {
     while (b != 0) {
-        uint temp = b;
+        uint32_t temp = b;
         b = a % b;
         a = temp;
     }
@@ -15,15 +16,15 @@ uint gcd(uint a, uint b) {
 }
 
 // вычисление суммы ряда
-string calculateSum(uint a, uint b) {
+string calculateSum(uint32_t a, uint32_t b) {
 
     // проверка сходимости ряда
     if (b <= 1) {
         return "infinity";
     }
 
-    uint numerator = 0;
-    uint denominator = 1;
+    uint32_t numerator = 0;
+    uint32_t denominator = 1;
 
     // формулы суммы ряда
     switch (a) {
@@ -53,11 +54,11 @@ string calculateSum(uint a, uint b) {
 
             double sum = 0.0;
 
-            for (uint n = 1; n <= 100000; n++) {
+            for (uint32_t n = 1; n <= 100000; n++) {
                 sum += pow(n, a) / pow(b, n);
             }
 
-            const uint PRECISION = 1000000;
+            const uint32_t PRECISION = 1000000;
 
             numerator = round(sum * PRECISION);
             denominator = PRECISION;
@@ -72,7 +73,7 @@ string calculateSum(uint a, uint b) {
     }
 
     // сокращение дроби
-    uint g = gcd(numerator, denominator);
+    uint32_t g = gcd(numerator, denominator);
 
     numerator /= g;
     denominator /= g;
@@ -99,7 +100,7 @@ int main() {
     }
 
     // вычисление результата
-    string result = calculateSum((uint)a, (uint)b);
+    string result = calculateSum((uint32_t)a, (uint32_t)b);
 
     // вывод результата
     cout << "Результат: " << result << endl;
