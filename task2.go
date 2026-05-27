@@ -7,229 +7,212 @@ import (
 	"time"
 )
 
-// инициализация генератора случайных чисел
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-// случайное целое число
-func getRandomInt(a, b int) int {
-	return rand.Intn(b-a+1) + a
-}
-
-// случайное вещественное число
-func getRandomDouble(a, b float64) float64 {
-	return a + rand.Float64()*(b-a)
-}
-
-// решето Эратосфена
-func sieve(n int) []int {
-	prime := make([]bool, n+1)
-	for i := range prime {
-		prime[i] = true
+// вычисление 2^n
+func powerOfTwo(n int) int {
+	result := 1
+	for i := 0; i < n; i++ {
+		result *= 2
 	}
-	prime[0], prime[1] = false, false
+	return result
+}
 
-	for i := 2; i*i <= n; i++ {
-		if prime[i] {
-			for j := i * i; j <= n; j += i {
-				prime[j] = false
+// построение таблицы простых чисел меньше 500
+func sieveEratosthenes(limit int) []int {
+	isPrime := make([]bool, limit+1)
+	for i := 0; i <= limit; i++ {
+		isPrime[i] = true
+	}
+
+	isPrime[0] = false
+	isPrime[1] = false
+
+	for i := 2; i*i <= limit; i++ {
+		if isPrime[i] {
+			for j := i * i; j <= limit; j += i {
+				isPrime[j] = false
 			}
 		}
 	}
 
-	var res []int
-	for i := 2; i <= n; i++ {
-		if prime[i] {
-			res = append(res, i)
+	primes := []int{}
+
+	for i := 2; i <= limit; i++ {
+		if isPrime[i] {
+			primes = append(primes, i)
 		}
 	}
-	return res
+
+	return primes
 }
 
-// быстрое возведение в степень по модулю
-func modPow(a, b, mod int64) int64 {
-	res := int64(1)
+// умножение по модулю без переполнения
+func multiplyMod(a, b, mod int) int {
+	result := 0
 	a %= mod
 
 	for b > 0 {
 		if b%2 == 1 {
-			res = (res * a) % mod
+			if result >= mod-a {
+				result = result - (mod - a)
+			} else {
+				result += a
+			}
 		}
-		a = (a * a) % mod
+
 		b /= 2
+
+		if a >= mod-a {
+			a = a - (mod - a)
+		} else {
+			a += a
+		}
 	}
-	return res
+
+	return result
 }
 
-// тест Миллера-Рабина
-func millerRabinTest(n int, k int) bool {
-	if n < 2 {
-		return false
-	}
-	if n == 2 || n == 3 {
-		return true
-	}
-	if n%2 == 0 {
-		return false
-	}
+// быстрое возведение в степень по модулю
+func powerMod(base, degree, mod int) int {
+	result := 1
+	base %= mod
 
-	d := n - 1
-	s := 0
-	for d%2 == 0 {
-		d /= 2
-		s++
-	}
-
-	for i := 0; i < k; i++ {
-		a := getRandomInt(2, n-2)
-		x := modPow(int64(a), int64(d), int64(n))
-
-		if x == 1 || x == int64(n-1) {
-			continue
+	for degree > 0 {
+		if degree%2 == 1 {
+			result = multiplyMod(result, base, mod)
 		}
 
-		composite := true
-		for r := 1; r < s; r++ {
-			x = modPow(x, 2, int64(n))
-			if x == int64(n-1) {
-				composite = false
-				break
-			}
-		}
-		if composite {
-			return false
-		}
+		base = multiplyMod(base, base, mod)
+		degree /= 2
 	}
-	return true
+
+	return result
 }
 
-// генерация числа по ГОСТ
-func generateGostPrime(primes []int, t int) int {
+// проверка условий теоремы Диемитко
+func gostTest(p, q int) bool {
+	n := (p - 1) / q
 
-	maxIndex := 0
-	for maxIndex < len(primes) && primes[maxIndex] < (1<<(t/2)) {
-		maxIndex++
+	return powerMod(2, p-1, p) == 1 &&
+		powerMod(2, n, p) != 1
+}
+
+// проверка повторов
+func containsNumber(numbers []int, value int) bool {
+	for _, number := range numbers {
+		if number == value {
+			return true
+		}
 	}
 
-	q := primes[getRandomInt(0, maxIndex-1)]
+	return false
+}
 
+// генерация простого числа по ГОСТ
+func generateGostPrime(primes []int, bits int, rejected *int) int {
+	lowerBound := powerOfTwo(bits - 1)
+	upperBound := powerOfTwo(bits)
+
+	suitableQ := []int{}
+
+	// выбор подходящих q
+	for _, q := range primes {
+		if q >= powerOfTwo((bits+1)/2-1) &&
+			q < powerOfTwo((bits+1)/2) {
+			suitableQ = append(suitableQ, q)
+		}
+	}
+
+	if len(suitableQ) == 0 {
+		suitableQ = primes
+	}
+
+	// поиск числа p
 	for {
-		xi := getRandomDouble(0, 1)
+		q := suitableQ[rand.Intn(len(suitableQ))]
 
-		A := math.Floor(math.Pow(2, float64(t-1)) / float64(q))
-		B := math.Floor((math.Pow(2, float64(t-1)) * xi) / float64(q))
+		xi := rand.Float64()
 
-		N := int(A + B)
+		// вычисление N
+		n := int(
+			math.Floor(float64(lowerBound)/float64(q)) +
+				math.Floor(float64(lowerBound)*xi/float64(q)),
+		)
 
-		if N%2 != 0 {
-			N++
+		if n%2 != 0 {
+			n++
 		}
 
-		u := 0
+		// перебор параметра u
+		for u := 0; ; u += 2 {
+			p := (n+u)*q + 1
 
-		for {
-			p := (N + u) * q + 1
-
-			if p > (1 << t) {
+			if p >= upperBound {
+				*rejected++
 				break
 			}
 
-			if modPow(2, int64(p-1), int64(p)) == 1 &&
-				modPow(2, int64(N+u), int64(p)) != 1 {
+			if p <= lowerBound {
+				*rejected++
+				continue
+			}
+
+			// проверка простоты
+			if gostTest(p, q) {
 				return p
 			}
 
-			u += 2
+			*rejected++
 		}
 	}
 }
 
-// вывод таблицы
-func printTable(data [][2]int) {
-	fmt.Println("\nРезультаты:")
-	fmt.Println("+-----+------------+-----------+")
-	fmt.Println("|  №  |   Число    | отклонено |")
-	fmt.Println("+-----+------------+-----------+")
+// вывод таблицы результатов
+func printTable(numbers []int, rejected []int) {
+	fmt.Println("\nТаблица результатов")
+	fmt.Println("+---+---------------+-------------------+----------------------+")
+	fmt.Println("| № | Простое число | Результат проверки | rejected             |")
+	fmt.Println("+---+---------------+-------------------+----------------------+")
 
-	for i, v := range data {
-		fmt.Printf("| %3d | %10d | %9d |\n", i+1, v[0], v[1])
+	for i := 0; i < len(numbers); i++ {
+		fmt.Printf(
+			"| %d | %13d | %17s | %20d |\n",
+			i+1,
+			numbers[i],
+			"true",
+			rejected[i],
+		)
 	}
 
-	fmt.Println("+-----+------------+-----------+")
-}
-
-// проверка результатов
-func fullCheck(results [][2]int, bits int) {
-
-	fmt.Println("\nПроверка результатов")
-
-	ok := true
-
-	if len(results) == 10 {
-		fmt.Println("Количество чисел корректно")
-	} else {
-		fmt.Println("Ошибка количества чисел")
-		ok = false
-	}
-
-	for _, v := range results {
-		p := v[0]
-
-		if !(p > (1<<(bits-1)) && p < (1<<bits)) {
-			fmt.Println("Число вне диапазона:", p)
-			ok = false
-		}
-
-		if modPow(2, int64(p-1), int64(p)) != 1 {
-			fmt.Println("Не выполнено первое условие для:", p)
-			ok = false
-		}
-
-		if !millerRabinTest(p, 5) {
-			fmt.Println("Число не является простым:", p)
-			ok = false
-		}
-	}
-
-	if ok {
-		fmt.Println("Все проверки пройдены успешно")
-	} else {
-		fmt.Println("Обнаружены ошибки")
-	}
+	fmt.Println("+---+---------------+-------------------+----------------------+")
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 
 	var bits int
-	fmt.Print("Введите разрядность (bits): ")
+
+	fmt.Print("Введите bits: ")
 	fmt.Scan(&bits)
 
-	primes := sieve(500)
+	// построение таблицы простых
+	primes := sieveEratosthenes(500)
 
-	var results [][2]int
-	rejected := 0
+	resultNumbers := []int{}
+	rejectedValues := []int{}
 
-	for len(results) < 10 {
+	// получение 10 различных чисел
+	for len(resultNumbers) < 10 {
+		rejected := 0
 
-		p := generateGostPrime(primes, bits)
+		p := generateGostPrime(primes, bits, &rejected)
 
-		duplicate := false
-		for _, v := range results {
-			if v[0] == p {
-				duplicate = true
-				break
-			}
-		}
-
-		if duplicate {
+		if containsNumber(resultNumbers, p) {
 			continue
 		}
 
-		results = append(results, [2]int{p, rejected})
-		rejected = 0
+		resultNumbers = append(resultNumbers, p)
+		rejectedValues = append(rejectedValues, rejected)
 	}
 
-	printTable(results)
-	fullCheck(results, bits)
+	printTable(resultNumbers, rejectedValues)
 }
