@@ -1,223 +1,295 @@
 #include <iostream>
 #include <vector>
-#include <cmath>
 #include <random>
 #include <iomanip>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
 // генератор случайных чисел
 mt19937 gen(random_device{}());
 
-// случайное целое число
-int getRandomInt(int a, int b) {
-    return uniform_int_distribution<int>(a, b)(gen);
+// получение случайного целого числа
+int randomInt(int left, int right) {
+    uniform_int_distribution<int> dist(left, right);
+    return dist(gen);
 }
 
-// случайное вещественное число
-double getRandomDouble(double a, double b) {
-    return uniform_real_distribution<double>(a, b)(gen);
+// получение случайного числа из (0;1)
+double randomDouble() {
+    uniform_real_distribution<double> dist(0.0, 1.0);
+    return dist(gen);
 }
 
-// решето Эратосфена (получаем список простых чисел)
-vector<int> sieve(int n) {
-    vector<bool> prime(n + 1, true);
-    prime[0] = prime[1] = false;
+// вычисление 2^n
+int powerOfTwo(int n) {
+    int result = 1;
 
-    for (int i = 2; i * i <= n; i++) {
-        if (prime[i]) {
-            for (int j = i * i; j <= n; j += i)
-                prime[j] = false;
+    for (int i = 0; i < n; i++) {
+        result *= 2;
+    }
+
+    return result;
+}
+
+// построение таблицы простых чисел
+vector<int> sieveEratosthenes(int limit) {
+
+    vector<bool> isPrime(limit + 1, true);
+    vector<int> primes;
+
+    isPrime[0] = false;
+    isPrime[1] = false;
+
+    for (int i = 2; i * i <= limit; i++) {
+        if (isPrime[i]) {
+            for (int j = i * i; j <= limit; j += i) {
+                isPrime[j] = false;
+            }
         }
     }
 
-    vector<int> res;
-    for (int i = 2; i <= n; i++)
-        if (prime[i]) res.push_back(i);
+    for (int i = 2; i <= limit; i++) {
+        if (isPrime[i]) {
+            primes.push_back(i);
+        }
+    }
 
-    return res;
+    return primes;
 }
 
-// быстрое возведение в степень по модулю
-long long mod_pow(long long a, long long b, long long mod) {
-    long long res = 1;
+// умножение по модулю без переполнения
+int multiplyMod(int a, int b, int mod) {
+
+    int result = 0;
     a %= mod;
 
     while (b > 0) {
-        if (b & 1) res = (res * a) % mod;
-        a = (a * a) % mod;
-        b >>= 1;
-    }
-    return res;
-}
 
-// тест Миллера-Рабина (для дополнительной проверки простоты)
-bool millerRabinTest(int n, int k = 5) {
-    if (n < 2) return false;
-    if (n == 2 || n == 3) return true;
-    if (n % 2 == 0) return false;
+        if (b % 2 == 1) {
 
-    int d = n - 1, s = 0;
-    while (d % 2 == 0) {
-        d /= 2;
-        s++;
-    }
-
-    for (int i = 0; i < k; i++) {
-        int a = rand() % (n - 3) + 2;
-        long long x = mod_pow(a, d, n);
-
-        if (x == 1 || x == n - 1) continue;
-
-        bool composite = true;
-        for (int r = 1; r < s; r++) {
-            x = mod_pow(x, 2, n);
-            if (x == n - 1) {
-                composite = false;
-                break;
-            }
+            if (result >= mod - a)
+                result = result - (mod - a);
+            else
+                result += a;
         }
-        if (composite) return false;
+
+        b /= 2;
+
+        if (a >= mod - a)
+            a = a - (mod - a);
+        else
+            a += a;
     }
-    return true;
+
+    return result;
 }
 
-// генерация простого числа по ГОСТ
-int generate_gost_prime(const vector<int>& primes, int t) {
+// быстрое возведение в степень по модулю
+int powerMod(int base, int degree, int mod) {
 
-    // выбираем случайное простое число q
-    int maxIndex = 0;
-    while (maxIndex < primes.size() && primes[maxIndex] < (1 << (t / 2)))
-        maxIndex++;
+    int result = 1;
+    base %= mod;
 
-    int q = primes[getRandomInt(0, maxIndex - 1)];
+    while (degree > 0) {
 
+        if (degree % 2 == 1)
+            result = multiplyMod(result, base, mod);
+
+        base = multiplyMod(base, base, mod);
+        degree /= 2;
+    }
+
+    return result;
+}
+
+// проверка условий теоремы Диемитко
+bool gostTest(int p, int q) {
+
+    int n = (p - 1) / q;
+
+    return
+        powerMod(2, p - 1, p) == 1 &&
+        powerMod(2, n, p) != 1;
+}
+
+// генерация кандидата в простые по ГОСТ
+int generateGostPrime(
+        const vector<int>& primes,
+        int bits,
+        int& rejected) {
+
+    int lowerBound = powerOfTwo(bits - 1);
+    int upperBound = powerOfTwo(bits);
+
+    // выбор подходящих q
+    vector<int> suitableQ;
+
+    for (int q : primes) {
+
+        if (
+            q >= powerOfTwo((bits + 1) / 2 - 1) &&
+            q < powerOfTwo((bits + 1) / 2)
+        ) {
+            suitableQ.push_back(q);
+        }
+    }
+
+    // поиск числа p
     while (true) {
 
-        // случайное число из (0,1)
-        double xi = getRandomDouble(0, 1);
+        if (suitableQ.empty())
+            suitableQ = primes;
 
-        // вычисляем N по формуле ГОСТ
-        double A = floor(pow(2, t - 1) / q);
-        double B = floor((pow(2, t - 1) * xi) / q);
+        int q =
+            suitableQ[
+                randomInt(
+                    0,
+                    suitableQ.size() - 1
+                )
+            ];
 
-        int N = (int)(A + B);
+        double xi = randomDouble();
 
-        // делаем N четным
-        if (N % 2 != 0) N++;
+        // вычисление N
+        int n =
+            floor(
+                (double)lowerBound / q
+            ) +
+            floor(
+                (double)lowerBound * xi / q
+            );
 
-        int u = 0;
+        if (n % 2 != 0)
+            n++;
 
-        // перебор значений u
-        while (true) {
-            int p = (N + u) * q + 1;
+        // перебор параметра u
+        for (int u = 0;; u += 2) {
 
-            // проверка выхода за диапазон
-            if (p > (1 << t)) break;
+            int p =
+                (n + u) * q + 1;
 
-            // условия теоремы Диемитко
-            if (mod_pow(2, p - 1, p) == 1 &&
-                mod_pow(2, N + u, p) != 1) {
-                return p;
+            if (p >= upperBound) {
+                rejected++;
+                break;
             }
 
-            u += 2;
+            if (p <= lowerBound) {
+                rejected++;
+                continue;
+            }
+
+            // проверка простоты
+            if (gostTest(p, q))
+                return p;
+
+            rejected++;
         }
     }
+}
+
+// проверка повторов
+bool containsNumber(
+        const vector<int>& numbers,
+        int value) {
+
+    return
+        find(
+            numbers.begin(),
+            numbers.end(),
+            value
+        )
+        != numbers.end();
 }
 
 // вывод таблицы результатов
-void print_table(const vector<pair<int,int>>& data) {
-    cout << "\nРезультаты:\n";
-    cout << "+-----+------------+-----------+\n";
-    cout << "|  №  |   Число    | отклонено |\n";
-    cout << "+-----+------------+-----------+\n";
+void printTable(
+        const vector<int>& numbers,
+        const vector<int>& rejected) {
 
-    for (int i = 0; i < data.size(); i++) {
-        cout << "| " << setw(3) << i+1
-             << " | " << setw(10) << data[i].first
-             << " | " << setw(9) << data[i].second
-             << " |\n";
+    cout << "\nТаблица результатов\n";
+
+    cout
+    << "+---+---------------+-------------------+----------------------+\n";
+
+    cout
+    << "| № | Простое число | Результат проверки | rejected             |\n";
+
+    cout
+    << "+---+---------------+-------------------+----------------------+\n";
+
+    for (int i = 0; i < numbers.size(); i++) {
+
+        cout
+        << "| "
+        << i + 1
+        << " | "
+        << setw(13)
+        << numbers[i]
+
+        << " | true"
+
+        << " | "
+        << setw(20)
+        << rejected[i]
+
+        << " |\n";
     }
 
-    cout << "+-----+------------+-----------+\n";
+    cout
+    << "+---+---------------+-------------------+----------------------+\n";
 }
 
-// автоматическая проверка результатов
-void full_check(const vector<pair<int,int>>& results, int bits) {
-
-    cout << "\nПроверка результатов\n";
-
-    bool ok = true;
-
-    // проверка количества
-    if (results.size() == 10)
-        cout << "Количество чисел корректно\n";
-    else {
-        cout << "Ошибка количества чисел\n";
-        ok = false;
-    }
-
-    // проверка каждого числа
-    for (auto [p, rejected] : results) {
-
-        // проверка диапазона
-        if (!(p > (1 << (bits - 1)) && p < (1 << bits))) {
-            cout << "Число вне диапазона: " << p << endl;
-            ok = false;
-        }
-
-        // проверка первого условия
-        if (mod_pow(2, p - 1, p) != 1) {
-            cout << "Не выполнено первое условие для: " << p << endl;
-            ok = false;
-        }
-
-        // дополнительная проверка простоты
-        if (!millerRabinTest(p)) {
-            cout << "Число не является простым: " << p << endl;
-            ok = false;
-        }
-    }
-
-    if (ok)
-        cout << "Все проверки пройдены успешно\n";
-    else
-        cout << "Обнаружены ошибки\n";
-}
-
+// основная программа
 int main() {
 
     int bits;
-    cout << "Введите разрядность (bits): ";
+
+    cout
+    << "Введите bits: ";
+
     cin >> bits;
 
-    // получаем список простых чисел
-    vector<int> primes = sieve(500);
+    // построение таблицы простых
+    vector<int> primes =
+        sieveEratosthenes(500);
 
-    vector<pair<int,int>> results;
-    int rejected = 0;
+    vector<int> resultNumbers;
+    vector<int> rejectedValues;
 
-    // генерируем 10 чисел
-    while (results.size() < 10) {
+    // получение 10 различных чисел
+    while (
+        resultNumbers.size()
+        < 10
+    ) {
 
-        int p = generate_gost_prime(primes, bits);
+        int rejected = 0;
 
-        // проверка на повтор
-        bool duplicate = any_of(results.begin(), results.end(),
-            [p](const pair<int,int>& v){ return v.first == p; });
+        int p =
+            generateGostPrime(
+                primes,
+                bits,
+                rejected
+            );
 
-        if (duplicate) continue;
+        if (
+            containsNumber(
+                resultNumbers,
+                p
+            )
+        )
+            continue;
 
-        results.push_back({p, rejected});
-        rejected = 0;
+        resultNumbers.push_back(p);
+        rejectedValues.push_back(rejected);
     }
 
-    print_table(results);
-
-    // проверка корректности
-    full_check(results, bits);
+    // вывод результата
+    printTable(
+        resultNumbers,
+        rejectedValues
+    );
 
     return 0;
 }
