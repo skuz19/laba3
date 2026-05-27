@@ -1,102 +1,108 @@
 package main
 
-import (
-	"fmt"
-	"math"
-	"strconv"
-)
+import "fmt"
 
-// функция для нахождения НОД
-func gcd(a uint32, b uint32) uint32 {
+type Fraction struct {
+	numerator   uint64
+	denominator uint64
+}
+
+// НОД
+func gcd(a, b uint64) uint64 {
 	for b != 0 {
-		a, b = b, a%b
+		temp := b
+		b = a % b
+		a = temp
 	}
+
 	return a
 }
 
-// вычисление суммы ряда
-func calculateSum(a uint32, b uint32) string {
+// сокращение дроби
+func reduce(f Fraction) Fraction {
+	g := gcd(f.numerator, f.denominator)
 
-	// проверка сходимости ряда
-	if b <= 1 {
+	f.numerator /= g
+	f.denominator /= g
+
+	return f
+}
+
+// сложение дробей
+func add(a, b Fraction) Fraction {
+	result := Fraction{
+		numerator:   a.numerator*b.denominator + b.numerator*a.denominator,
+		denominator: a.denominator * b.denominator,
+	}
+
+	return reduce(result)
+}
+
+// умножение дроби на целое число
+func multiply(f Fraction, value uint64) Fraction {
+	f.numerator *= value
+	return reduce(f)
+}
+
+// деление дроби на целое число
+func divide(f Fraction, value uint64) Fraction {
+	f.denominator *= value
+	return reduce(f)
+}
+
+// биномиальный коэффициент C(n, k)
+func combination(n, k int) uint64 {
+	var result uint64 = 1
+
+	for i := 1; i <= k; i++ {
+		result = result * uint64(n-i+1) / uint64(i)
+	}
+
+	return result
+}
+
+// вычисление суммы ряда
+func calculateSum(a, b int) string {
+	if b == 1 {
 		return "infinity"
 	}
 
-	var numerator uint32 = 0
-	var denominator uint32 = 1
+	var sums [11]Fraction
 
-	// формулы суммы ряда
-	switch a {
+	// сумма ряда 1 / b^n
+	sums[0] = reduce(Fraction{
+		numerator:   1,
+		denominator: uint64(b - 1),
+	})
 
-	case 1:
-		numerator = b
-		denominator = (b - 1) * (b - 1)
-
-	case 2:
-		numerator = b * (b + 1)
-		denominator = uint32(math.Pow(float64(b-1), 3))
-
-	case 3:
-		numerator = b * (b*b + 4*b + 1)
-		denominator = uint32(math.Pow(float64(b-1), 4))
-
-	case 4:
-		numerator = b * (b*b*b + 11*b*b + 11*b + 1)
-		denominator = uint32(math.Pow(float64(b-1), 5))
-
-	// остальные случаи a = 5..10
-	default:
-
-		sum := 0.0
-
-		for n := uint32(1); n <= 100000; n++ {
-			sum += math.Pow(float64(n), float64(a)) /
-				math.Pow(float64(b), float64(n))
+	// вычисление сумм для степеней от 1 до a
+	for k := 1; k <= a; k++ {
+		current := Fraction{
+			numerator:   1,
+			denominator: 1,
 		}
 
-		const precision uint32 = 1000000
+		for j := 0; j < k; j++ {
+			term := multiply(sums[j], combination(k, j))
+			current = add(current, term)
+		}
 
-		numerator = uint32(math.Round(sum * float64(precision)))
-		denominator = precision
+		sums[k] = divide(current, uint64(b-1))
 	}
 
-	// защита от деления на ноль
-	if denominator == 0 {
-		return "error"
-	}
+	answer := reduce(sums[a])
 
-	// сокращение дроби
-	g := gcd(numerator, denominator)
-
-	numerator /= g
-	denominator /= g
-
-	// формирование результата
-	return strconv.FormatUint(uint64(numerator), 10) +
-		"/" +
-		strconv.FormatUint(uint64(denominator), 10)
+	return fmt.Sprintf("%d/%d", answer.numerator, answer.denominator)
 }
 
 func main() {
-
 	var a, b int
 
-	fmt.Print("Введите a и b: ")
-	_, err := fmt.Scan(&a, &b)
+	fmt.Scan(&a, &b)
 
-	// проверка корректности ввода
-	if err != nil {
-		return
-	}
-
-	// проверка диапазона
 	if a < 1 || a > 10 || b < 1 || b > 10 {
 		return
 	}
 
-	// вычисление результата
-	result := calculateSum(uint32(a), uint32(b))
-
-	// вывод результата
-	fmt.Println("Результат:", result)
+	fmt.Println(calculateSum(a, b))
 }
